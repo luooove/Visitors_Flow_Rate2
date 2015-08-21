@@ -17,9 +17,9 @@ void setup (void) {
   Wire.begin();
   //初始化RTC
   RTC.begin();
-//  RTC.adjust(dt); //Adjust date-time as defined 'dt' above 
- // clear_Mem();
-  attachInterrupt(0, Detect1, RISING );//下降沿说明有
+  //  RTC.adjust(dt); //Adjust date-time as defined 'dt' above
+  // clear_Mem();
+  attachInterrupt(0, Detect1, RISING  );//下降沿说明有
   attachInterrupt(1, Detect2, RISING );//下降沿说明人
 }
 
@@ -32,7 +32,7 @@ void clear_Mem()
 
 void Detect1()
 {
-  //Serial.println("Detect1()");
+  Serial.println("Detect1()");
   if (Director1 == 0) //means people is go in and not yet pass
   {
     Director1 = 1;
@@ -47,7 +47,7 @@ void Detect1()
 }
 void Detect2()
 {
-  //Serial.println("Detect2()");
+  Serial.println("Detect2()");
   if (Director1 == 0) //means people is go out and not yet pass
   {
     Director1 = 2;
@@ -80,12 +80,46 @@ void SaveData()
   buffer[8] = VisitorsOut % 255;
   buffer[9] = (VisitorsOut >> 8) % 255;
   //写入时间信息到eeprom
-  AT24C32.WriteMem(count, buffer, 10);
+  AT24C32.WriteMem(0, (char)count%255);
+  AT24C32.WriteMem(1, (char)(count>>8)%255);
+  AT24C32.WriteMem(2+count*10, buffer, 10);
 }
 
 void ReadData()
 {
-  
+  int all;
+  char buffer[10];
+  char buffer1[2];
+  AT24C32.ReadMem(0, buffer1, 2);
+  all = buffer1[0] + buffer1[1] * 255;
+  Serial.println( buffer1[0],DEC);
+   Serial.println( buffer1[1],DEC);
+  Serial.println(all);
+  int i;
+  for (i = 0; i < all; i++)
+  {
+    AT24C32.ReadMem(2+i*10, buffer, 10);
+    Serial.print(2000 + buffer[0], DEC);  //year
+    Serial.print('-');
+    Serial.print(buffer[1], DEC);//month
+    Serial.print('-');
+    Serial.print(buffer[2], DEC);//day
+    Serial.print('/');
+
+    Serial.print(buffer[3], DEC);//hour
+    Serial.print(':');
+    Serial.print(buffer[4], DEC);//min
+    Serial.print(':');
+    Serial.print(buffer[5], DEC);//sec
+    Serial.print('#');
+
+    int temp = buffer[6] + buffer[7] * 255;
+    Serial.print(temp, DEC);
+    Serial.print('/');
+    int temp2 = buffer[8] + buffer[9] * 255;
+    Serial.print(temp2, DEC);
+    Serial.println();
+  }
 }
 
 void loop() {
@@ -93,7 +127,6 @@ void loop() {
   if (Serial.available() > 0) {
     //读取数据
     int instruct = Serial.read();
-
     switch (instruct) {
       case 'P':
         {
@@ -103,29 +136,7 @@ void loop() {
         }
       case 'G':
         {
-          char buffer[10];
-          //读取三个字节数据
-          AT24C32.ReadMem(0, buffer, 10);
-          Serial.print(2000 + buffer[0], DEC);  //year
-          Serial.print('-');
-          Serial.print(buffer[1], DEC);//month
-          Serial.print('-');
-          Serial.print(buffer[2], DEC);//day
-          Serial.print('/');
-
-          Serial.print(buffer[3], DEC);//hour
-          Serial.print(':');
-          Serial.print(buffer[4], DEC);//min
-          Serial.print(':');
-          Serial.print(buffer[5], DEC);//sec
-          Serial.print('#');
-
-          int temp = buffer[6] + buffer[7] * 255;
-          Serial.print(temp, DEC);
-          Serial.print('/');
-          int temp2 = buffer[8] + buffer[9] * 255;
-          Serial.print(temp2, DEC);
-          Serial.println();
+          ReadData();
           break;
         }
       case 'F':
